@@ -23,7 +23,6 @@ p_eps=0.2
 opt_type='spsa-gc'
 
 DIR_PATH = Path("output", DATASET, TRAINER, f"{ptb}_{CFG}", f"shot{SHOTS}_ep{ep}", f"{opt_type}_b1{b1}", f"a{alpha}_g{gamma}_sa{spsa_a}_sc{spsa_c}_eps{p_eps}", f"seed{SEED}")
-# DIR=f"output/{DATASET}/{TRAINER}/{ptb}_{CFG}/shot{SHOTS}_ep{ep}/{opt_type}_b1{b1}/a{alpha}_g{gamma}_sa{spsa_a}_sc{spsa_c}_eps{p_eps}/seed{SEED}"
 RESUME_DIR = DIR_PATH
 
 
@@ -39,6 +38,8 @@ python train.py \
 --load-epoch 20 \
 --resume {RESUME_DIR} \
 --prune-experiment \
+--use_wandb \
+--wb_name blackvip \
 TRAIN.CHECKPOINT_FREQ 5 \
 DATASET.NUM_SHOTS {SHOTS} \
 DATASET.SUBSAMPLE_CLASSES all \
