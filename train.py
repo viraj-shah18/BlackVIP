@@ -200,7 +200,7 @@ def setup_cfg(args):
     return cfg
 
 def prune_experiment(trainer, args):
-    available_percents = [0.4, 0.6, 0.8, 0.95, 0.99]
+    available_percents = [0.4, 0.6, 0.8, 1]
     trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
 
     prunable_layers = trainer.get_prunable_layers()
@@ -211,22 +211,20 @@ def prune_experiment(trainer, args):
         for percent in available_percents:
             print(f"Pruning {layer_name} in Decoder with {percent} percent")
             trainer.model.coordinator.dec.prune_layer(layer, percent)
-            all_last_acc = trainer.test()
+            test_acc = trainer.test()
 
             if args.use_wandb: 
                 wandb.log({'layer_name': layer_name, 
                            'percent': percent,
-                           'all_acc_last': all_last_acc})
+                           'all_acc_last': test_acc})
 
-            trainer.model.coordinator.dec.prune_layer(layer, percent)
-            test_acc = trainer.test()
-            print(f"Test accuracy after pruning {layer} with {percent} percent: {test_acc}")
+            print(f"Test accuracy after pruning {layer_name} with {percent} percent: {test_acc:.4f}")
             layer_accs.append(test_acc)
 
             trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
         all_accs[layer_name] = layer_accs
     
-    # print(all_accs)
+    print(all_accs)
 
 def main(args):
     cfg = setup_cfg(args)
