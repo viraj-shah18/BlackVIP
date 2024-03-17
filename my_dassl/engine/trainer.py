@@ -484,6 +484,13 @@ class SimpleTrainer(TrainerBase):
         name = names[0]
         return self._optims[name].param_groups[0]["lr"]
 
+    @torch.no_grad()
+    def get_prunable_layers(self):
+        possible_layers = []
+        for name, layer in self.model.coordinator.dec.body.named_modules():
+            if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
+                possible_layers.append((name, layer))
+        return possible_layers
 
 class TrainerXU(SimpleTrainer):
     """A base trainer using both labeled and unlabeled data.

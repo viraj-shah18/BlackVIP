@@ -199,6 +199,34 @@ def setup_cfg(args):
     cfg.freeze()
     return cfg
 
+def prune_experiment(trainer, args):
+    available_percents = [0.4, 0.6, 0.8, 0.95, 0.99]
+    trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
+
+    prunable_layers = trainer.get_prunable_layers()
+    all_accs = {}
+    for (layer_name, layer) in prunable_layers:
+        layer_accs = []
+        
+        for percent in available_percents:
+            print(f"Pruning {layer_name} in Decoder with {percent} percent")
+            trainer.model.coordinator.dec.prune_layer(layer, percent)
+            all_last_acc = trainer.test()
+
+            if args.use_wandb: 
+                wandb.log({'layer_name': layer_name, 
+                           'percent': percent,
+                           'all_acc_last': all_last_acc})
+
+            trainer.model.coordinator.dec.prune_layer(layer, percent)
+            test_acc = trainer.test()
+            print(f"Test accuracy after pruning {layer} with {percent} percent: {test_acc}")
+            layer_accs.append(test_acc)
+
+            trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
+        all_accs[layer_name] = layer_accs
+    
+    # print(all_accs)
 
 def main(args):
     cfg = setup_cfg(args)
@@ -271,14 +299,17 @@ def main(args):
                 trainer.load_model(args.model_dir, epoch=args.load_epoch)
             else:
                 trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
-            all_last_acc = trainer.test()
-
-            if args.use_wandb: 
-                wandb.log({f'all_acc_best'  : 0,
-                            f'all_acc_last'  : all_last_acc,
-                            f'new_acc'       : 0,
-                            f'base_acc'      : 0,
-                            f'H_acc'         : 0, })
+            
+            if args.prune_experiment:
+                prune_experiment(trainer, args)             
+            else:
+                all_last_acc = trainer.test()
+                if args.use_wandb: 
+                    wandb.log({f'all_acc_best'  : 0,
+                                f'all_acc_last'  : all_last_acc,
+                                f'new_acc'       : 0,
+                                f'base_acc'      : 0,
+                                f'H_acc'         : 0, })
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -303,9 +334,7 @@ if __name__ == "__main__":
     parser.add_argument('--wb_name', type=str, default='test', help='wandb project name')
     parser.add_argument('--wb_method_name', type=str, default='no')
     parser.add_argument('--randomize', type=int, default=1)
+    parser.add_argument("--prune-experiment", action="store_true", help="pruning experiment")
     parser.add_argument("opts",default=None,nargs=argparse.REMAINDER,help="modify config options using the command-line",)
-    parser.add_argument("--prune-percent", type=float, default=0.0, help="prune percent")
-    parser.add_argument("--prune-layer", type=str, default="", help="layer to prune")
-    
     args = parser.parse_args()
     main(args)

@@ -123,9 +123,7 @@ class Coordinator(nn.Module):
         act = nn.GELU #if args.TRAINER.BLACKVIP.ACT == 'gelu' else nn.ReLU
         src_dim = args.TRAINER.BLACKVIP.SRC_DIM
         add_conv = args.TRAINER.BLACKVIP.ADD_CONV
-        prune_percent = args.TRAINER.BLACKVIP.PRUNE_PERCENT
-        prune_layer = args.TRAINER.BLACKVIP.PRUNE_LAYER
-
+                
         z_dim = 768
         if self.backbone == 'vit-mae-base':   #! SSL-MAE VIT-B (n param: 86M)
             self.enc_pt = ViTForImageClassification.from_pretrained("facebook/vit-mae-base")
@@ -137,14 +135,6 @@ class Coordinator(nn.Module):
         else: raise ValueError('not implemented')
 
         self.dec = DecoderManual(z_dim, src_dim, act=act, arch=self.backbone, add_conv=add_conv)
-        
-        if prune_percent > 0:
-            if prune_layer == 'p_trigger':
-                self.dec = l1_unstructured(self.dec.p_trigger, name="weight", amount=prune_percent)
-            else:    
-                self.dec = l1_unstructured(self.dec.body[prune_layer], name="weight", amount=prune_percent)
-            print(f'Pruned {prune_percent}% of {prune_layer} layer')
-
 
     def forward(self, x):
         with torch.no_grad():
@@ -280,7 +270,9 @@ class DecoderManual(nn.Module):
         else:
             return self.body(z)
         return self.body(z_cube)
-
+    
+    def prune_layer(self, layer, percent):
+        layer = l1_unstructured(layer, name="weight", amount=percent)
 
 class EncoderManual(nn.Module):
     def __init__(self, out_dim, act=nn.GELU, gap=False):
