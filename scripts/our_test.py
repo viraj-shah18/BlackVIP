@@ -8,17 +8,17 @@ SEED=1
 CFG="vit_b16"
 ptb="vit-mae-base"
 
-DATASET="caltech101"
-ep=20
+DATASET="locmnist"
+ep=50
 
 spsa_os=1.0
-alpha=0.4
+alpha=0.5
 spsa_a=0.01
 
 b1=0.9
 gamma=0.2
 spsa_c=0.005
-p_eps=0.2
+p_eps=1.0
 
 opt_type='spsa-gc'
 
@@ -35,11 +35,9 @@ python train.py \
 --config-file configs/trainers/{TRAINER}/{CFG}.yaml \
 --output-dir {DIR_PATH} \
 --eval-only \
---load-epoch 20 \
+--load-epoch 300 \
 --resume {RESUME_DIR} \
---prune-experiment \
---use_wandb \
---wb_name blackvip \
+--prune-decoder \
 TRAIN.CHECKPOINT_FREQ 5 \
 DATASET.NUM_SHOTS {SHOTS} \
 DATASET.SUBSAMPLE_CLASSES all \

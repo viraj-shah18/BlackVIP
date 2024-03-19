@@ -177,6 +177,24 @@ def extend_cfg(cfg):
     cfg.TRAINER.COCOOP.CTX_INIT = ""  # initialization words
     cfg.TRAINER.COCOOP.PREC = "fp16"  # fp16, fp32, amp
 
+    #! Pruning Parameters
+    prune_dict = {
+                'conv_transpose_1': 0.4,
+                'conv_transpose_2': 0.9,
+                'conv_transpose_3': 0.8,
+                'conv_transpose_4': 0.4,
+                'conv_transpose_5': 0.9,
+                'conv_transpose_6': 0.4,
+                'conv_transpose_7': 0.6,
+                'conv_transpose_8': 0.4,
+                'conv_transpose_9': 0.9,
+                'conv_1': 0.6,
+                'conv_2': 0.9,
+                'conv_3': 0.9,
+                'conv_4': 0.9
+                }
+    cfg.TRAINER.PRUNE = CN(prune_dict)
+
 
 def setup_cfg(args):
     cfg = get_cfg_default()
@@ -225,6 +243,24 @@ def prune_experiment(trainer, args):
         all_accs[layer_name] = layer_accs
     
     print(all_accs)
+
+def prune_decoder(trainer, args):
+    trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
+
+    prunable_layers = trainer.get_prunable_layers()
+    for (layer_name, layer) in prunable_layers:
+        # breakpoint()
+        percent = trainer.cfg.TRAINER.PRUNE[layer_name]
+        print(f"Pruning {layer_name} in Decoder with {100*percent} percent")
+        trainer.model.coordinator.dec.prune_layer(layer, percent)
+
+    test_acc = trainer.test()
+    if args.use_wandb: 
+        wandb.log({'all_acc_last': test_acc})
+
+    print(f"Test accuracy after pruning {layer_name} with {percent} percent: {test_acc:.4f}")
+    return test_acc
+
 
 def main(args):
     cfg = setup_cfg(args)
@@ -300,6 +336,8 @@ def main(args):
             
             if args.prune_experiment:
                 prune_experiment(trainer, args)             
+            if args.prune_decoder:
+                prune_decoder(trainer, args)
             else:
                 all_last_acc = trainer.test()
                 if args.use_wandb: 
@@ -332,7 +370,8 @@ if __name__ == "__main__":
     parser.add_argument('--wb_name', type=str, default='test', help='wandb project name')
     parser.add_argument('--wb_method_name', type=str, default='no')
     parser.add_argument('--randomize', type=int, default=1)
-    parser.add_argument("--prune-experiment", action="store_true", help="pruning experiment")
+    parser.add_argument("--prune-experiment", action="store_true", help="pruning experiment for sensitivity analysis")
+    parser.add_argument("--prune-decoder", action="store_true", help="final pruning for decoder. Set values in train.py")
     parser.add_argument("opts",default=None,nargs=argparse.REMAINDER,help="modify config options using the command-line",)
     args = parser.parse_args()
     main(args)
