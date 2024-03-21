@@ -497,7 +497,7 @@ class SimpleTrainer(TrainerBase):
         self.evaluator.reset()
         data_loader = self.test_loader
         
-        test_input = next(iter(data_loader))["img"]
+        test_input = next(iter(data_loader))["img"].to(self.device)
         self.model(test_input, save_intermediate=True)
         return
 
