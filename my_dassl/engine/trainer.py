@@ -498,7 +498,6 @@ class SimpleTrainer(TrainerBase):
         data_loader = self.test_loader
         
         test_input = next(iter(data_loader))["img"]
-        breakpoint()
         self.model(test_input, save_intermediate=True)
         return
 
