@@ -491,6 +491,16 @@ class SimpleTrainer(TrainerBase):
             if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
                 possible_layers.append((name, layer))
         return possible_layers
+    
+    def save_prompted_images(self):
+        self.set_model_mode("eval")
+        self.evaluator.reset()
+        data_loader = self.test_loader
+        
+        test_input = next(iter(data_loader))["img"]
+        breakpoint()
+        self.model(test_input, save_intermediate=True)
+        return
 
 class TrainerXU(SimpleTrainer):
     """A base trainer using both labeled and unlabeled data.

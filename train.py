@@ -192,7 +192,7 @@ def extend_cfg(cfg):
                 'conv_2': 0.9,
                 'conv_3': 0.9,
                 'conv_4': 0.9
-                }
+    }
     cfg.TRAINER.PRUNE = CN(prune_dict)
 
 
@@ -260,6 +260,15 @@ def prune_decoder(trainer, args):
 
     print(f"Test accuracy after pruning {layer_name} with {percent} percent: {test_acc:.4f}")
     return test_acc
+
+def pruning_main(trainer, args):
+    if args.prune_experiment:
+        prune_experiment(trainer, args)
+        return True             
+    if args.prune_decoder:
+        prune_decoder(trainer, args)
+        return True
+    return False
 
 
 def main(args):
@@ -334,11 +343,13 @@ def main(args):
             else:
                 trainer.load_model(trainer.output_dir, epoch=args.load_epoch)
             
-            if args.prune_experiment:
-                prune_experiment(trainer, args)             
-            if args.prune_decoder:
-                prune_decoder(trainer, args)
-            else:
+            save_intermediate = args.save_intermediate
+            if save_intermediate:
+                trainer.save_prompted_images()
+                return
+            
+            try_pruning = pruning_main(trainer, args)
+            if not try_pruning:
                 all_last_acc = trainer.test()
                 if args.use_wandb: 
                     wandb.log({f'all_acc_best'  : 0,
@@ -372,6 +383,7 @@ if __name__ == "__main__":
     parser.add_argument('--randomize', type=int, default=1)
     parser.add_argument("--prune-experiment", action="store_true", help="pruning experiment for sensitivity analysis")
     parser.add_argument("--prune-decoder", action="store_true", help="final pruning for decoder. Set values in train.py")
+    parser.add_argument("--save_intermediate", action="store_true", help="save prompted images")
     parser.add_argument("opts",default=None,nargs=argparse.REMAINDER,help="modify config options using the command-line",)
     args = parser.parse_args()
     main(args)

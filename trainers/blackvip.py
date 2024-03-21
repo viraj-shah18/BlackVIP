@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.cuda.amp import autocast
 import os
+from torchvision.utils import save_image
 
 from my_dassl.engine import TRAINER_REGISTRY, TrainerX
 from my_dassl.metrics import compute_accuracy
@@ -53,10 +54,16 @@ class CustomCLIP(nn.Module):
         self.text_features = text_features.to(device)
         self.coordinator = visual_prompters.__dict__[cfg.TRAINER.BLACKVIP.METHOD](cfg)
  
-    def forward(self, image):
+    def forward(self, image, save_intermediate=False):
         prompt, _  = self.coordinator(image.type(self.dtype))
         prompted_images = clip_clipping(image + self.p_eps * prompt)
-
+        if save_intermediate:
+            save_dir = osp.join(self.cfg.OUTPUT_DIR, 'prompted_images')
+            os.makedirs(save_dir, exist_ok=True)
+            for i in range(min(prompted_images.shape[0], 32)):
+                save_image(prompted_images[i], osp.join(save_dir, f"img_{i}.png"))
+            return
+            
         image_features = self.image_encoder(prompted_images)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 

@@ -37,7 +37,7 @@ python train.py \
 --eval-only \
 --load-epoch 300 \
 --resume {RESUME_DIR} \
---prune-decoder \
+--save_intermediate \
 TRAIN.CHECKPOINT_FREQ 5 \
 DATASET.NUM_SHOTS {SHOTS} \
 DATASET.SUBSAMPLE_CLASSES all \
